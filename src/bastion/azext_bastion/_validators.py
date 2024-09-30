@@ -24,9 +24,11 @@ def _validate_ip_address_format(namespace):
             Please verify if there are any spaces or other invalid characters.""") from e
         namespace.target_ip_address = input_value
 
+
 def validate_vm_name(namespace):
     if namespace.target_vm_name is not None:
         _validate_vm_name_format(namespace)
+
 
 def _validate_vm_name_format(namespace):
     if namespace.target_vm_name is not None:
