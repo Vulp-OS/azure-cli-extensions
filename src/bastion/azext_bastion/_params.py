@@ -11,6 +11,7 @@
 from azure.cli.core.commands.parameters import get_resource_name_completion_list, get_three_state_flag
 from knack.arguments import CLIArgumentType
 from ._validators import (validate_ip_address)
+from ._validators import (validate_vm_name)
 
 
 def load_arguments(self, _):  # pylint: disable=unused-argument
@@ -29,6 +30,8 @@ def load_arguments(self, _):  # pylint: disable=unused-argument
                    options_list=["--target-resource-id"])
         c.argument("target_ip_address", help="IP address of target Virtual Machine.", required=False,
                    options_list=["--target-ip-address"], validator=validate_ip_address)
+        c.argument("target_vm_name", help="Name of the target Virtual Machine.", required=False,
+                   options_list=["--target-vm-name"], validator=validate_vm_name)
 
     with self.argument_context("network bastion ssh") as c:
         c.argument("auth_type", help="Auth type to use for SSH connections.", options_list=["--auth-type"])

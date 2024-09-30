@@ -137,7 +137,7 @@ def _build_args(cert_file, private_key_file):
     return private_key + certificate
 
 
-def ssh_bastion_host(cmd, auth_type, target_resource_id, target_ip_address, resource_group_name, bastion_host_name,
+def ssh_bastion_host(cmd, auth_type, target_resource_id, target_ip_address, target_vm_name, resource_group_name, bastion_host_name,
                      resource_port=None, username=None, ssh_key=None, ssh_args=None):
     import os
     from .aaz.latest.network.bastion import Show
@@ -162,6 +162,11 @@ def ssh_bastion_host(cmd, auth_type, target_resource_id, target_ip_address, reso
                                              22, 3389.")
         target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/{resource_group_name}" \
                              f"/providers/Microsoft.Network/bh-hostConnect/{target_ip_address}"
+
+    vmname_connect = _is_vmnameconnect_request(bastion, target_vm_name)
+    if vmname_connect:
+        target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/{resource_group_name}" \
+                             f"/providers/Microsoft.Compute/virtualMachines/{target_vm_name}"
 
     _validate_resourceid(target_resource_id)
     bastion_endpoint = _get_bastion_endpoint(cmd, bastion, resource_port, target_resource_id)
@@ -249,7 +254,7 @@ def _get_rdp_file_path(tunnel_server):
     return rdpfilepath
 
 
-def rdp_bastion_host(cmd, target_resource_id, target_ip_address, resource_group_name, bastion_host_name,
+def rdp_bastion_host(cmd, target_resource_id, target_ip_address, target_vm_name, resource_group_name, bastion_host_name,
                      auth_type=None, resource_port=None, disable_gateway=False, configure=False, enable_mfa=False):
     import os
     from azure.cli.core._profile import Profile
@@ -269,6 +274,8 @@ def rdp_bastion_host(cmd, target_resource_id, target_ip_address, resource_group_
         raise ClientRequestError('Bastion Host SKU must be Standard or Premium and Native Client must be enabled.')
 
     ip_connect = _is_ipconnect_request(bastion, target_ip_address)
+
+    vmname_connect = _is_vmnameconnect_request(bastion, target_vm_name)
 
     if auth_type is None:
         # do nothing
@@ -292,6 +299,10 @@ def rdp_bastion_host(cmd, target_resource_id, target_ip_address, resource_group_
 
         target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/{resource_group_name}" \
                              f"/providers/Microsoft.Network/bh-hostConnect/{target_ip_address}"
+
+    if vmname_connect:
+        target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/{resource_group_name}" \
+                             f"/providers/Microsoft.Compute/virtualMachines/{target_vm_name}"
 
     _validate_resourceid(target_resource_id)
     bastion_endpoint = _get_bastion_endpoint(cmd, bastion, resource_port, target_resource_id)
@@ -351,6 +362,10 @@ def _is_ipconnect_request(bastion, target_ip_address):
         raise InvalidArgumentValueError(err_msg)
     return False
 
+def _is_vmnameconnect_request(bastion, target_vm_name):
+    if target_vm_name:
+        return True
+    return False
 
 def _is_sku_standard_or_higher(sku):
     allowed_skus = {
@@ -413,7 +428,7 @@ def _tunnel_close_handler(tunnel):
     sys.exit()
 
 
-def create_bastion_tunnel(cmd, target_resource_id, target_ip_address, resource_group_name, bastion_host_name,
+def create_bastion_tunnel(cmd, target_resource_id, target_ip_address, target_vm_name, resource_group_name, bastion_host_name,
                           resource_port, port, timeout=None):
 
     from .aaz.latest.network.bastion import Show
@@ -427,6 +442,8 @@ def create_bastion_tunnel(cmd, target_resource_id, target_ip_address, resource_g
         raise ClientRequestError('Bastion Host SKU must be Standard or Premium and Native Client must be enabled.')
 
     ip_connect = _is_ipconnect_request(bastion, target_ip_address)
+    vmname_connect = _is_vmnameconnect_request(bastion, target_vm_name)
+
     if ip_connect:
         target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/" \
                              f"{resource_group_name}/providers/Microsoft.Network/bh-hostConnect/{target_ip_address}"
@@ -434,6 +451,10 @@ def create_bastion_tunnel(cmd, target_resource_id, target_ip_address, resource_g
     if ip_connect and int(resource_port) not in [22, 3389]:
         raise UnrecognizedArgumentError("Custom ports are not allowed. Allowed ports for Tunnel with IP connect is \
                                         22, 3389.")
+
+    if vmname_connect:
+        target_resource_id = f"/subscriptions/{get_subscription_id(cmd.cli_ctx)}/resourceGroups/{resource_group_name}" \
+                             f"/providers/Microsoft.Compute/virtualMachines/{target_vm_name}"
 
     _validate_resourceid(target_resource_id)
     bastion_endpoint = _get_bastion_endpoint(cmd, bastion, resource_port, target_resource_id)
